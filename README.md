@@ -20,4 +20,3 @@ java -jar target/Mongodb-1.0-SNAPSHOT-jar-with-dependencies.jar
 TODO: 
 
 - Need to finish setting up the logger; remove the System.out.println's
-- better organization and modularization as i write more examples.
