@@ -5,9 +5,9 @@ import junit.framework.TestCase;
 import junit.framework.TestSuite;
 
 /**
- * Unit test for simple Mongodb.
+ * Unit test for simple MongoDB.
  */
-public class MongodbTest
+public class MongoDBTest
     extends TestCase
 {
     /**
@@ -15,7 +15,7 @@ public class MongodbTest
      *
      * @param testName name of the test case
      */
-    public MongodbTest(String testName )
+    public MongoDBTest(String testName )
     {
         super( testName );
     }
@@ -25,7 +25,7 @@ public class MongodbTest
      */
     public static Test suite()
     {
-        return new TestSuite( MongodbTest.class );
+        return new TestSuite( MongoDBTest.class );
     }
 
     /**

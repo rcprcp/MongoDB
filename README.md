@@ -1,6 +1,6 @@
-# Mongodb Test Program
+# MongoDB Test Program
 
-First try working with Mongob in Java. I have been testing this with Mongo Atlas. Work in progress, please read this code before trying to run it.  :) 
+First try working with MongoDB in Java. I have been testing this with Mongo Atlas. Work in progress, please read this code before trying to run it.  :) 
 
 You'll need to configure the environment variables to fit your setup - you'll need the cluster ID, username and password.
 ```shell
@@ -11,10 +11,10 @@ export MONGODB_USERNAME=myusername
 the usual Maven incantation should be enough to build the runnable jar. 
 
 ```shell
-git clone https://github.com/rcprcp/Mongodb
-cd Mongodb
+git clone https://github.com/rcprcp/MongoDB
+cd MongoDB
 mvn package
-java -jar target/Mongodb-1.0-SNAPSHOT-jar-with-dependencies.jar
+java -jar target/MongoDB-1.0-SNAPSHOT-jar-with-dependencies.jar
 ```
 
 TODO: 
