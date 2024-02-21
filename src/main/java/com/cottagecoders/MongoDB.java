@@ -23,6 +23,7 @@ import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.result.InsertOneResult;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
@@ -56,17 +57,39 @@ public class MongoDB {
             .serverApi(serverApi)
             .build();
 
-    MongoClient client = MongoClients.create(settings);
-    ping(client);
-
-    MongoDatabase mdb = client.getDatabase(DB_NAME);
-    MongoCollection coll = mdb.getCollection(PEOPLE_COLLECTION);
-
-    deleteAllDocuments(client, DB_NAME, PEOPLE_COLLECTION);
-    long start = System.currentTimeMillis();
+    long start = 0;
     long numdocs = 0;
-    try {
+    try (MongoClient client = MongoClients.create(settings)) {
+      ping(client);
+
+      MongoDatabase mdb = client.getDatabase(DB_NAME);
+      MongoCollection coll = mdb.getCollection(PEOPLE_COLLECTION);
+      start = System.currentTimeMillis();
       numdocs = insertSomeDocuments(coll, DB_NAME, PEOPLE_COLLECTION, 1_000_000);
+
+      insertOneDocument(client, DB_NAME, PEOPLE_COLLECTION, new Document().append("name", "matt"));
+      //      deleteAllDocuments(client, DB_NAME, PEOPLE_COLLECTION);
+
+      // drop output collection.
+      mdb.getCollection("res").drop();
+      aggregateOne(mdb);
+
+      coll = mdb.getCollection(PEOPLE_COLLECTION);
+      System.out.println("document count " + coll.countDocuments());
+
+      //    deleteOurDatabase(client, DB_NAME);
+
+      listDatabases(client);
+
+      printSomeZips(client);
+      printSomePeople(client, DB_NAME, PEOPLE_COLLECTION, 100);
+
+      insertOneDocument(
+          client,
+          DB_NAME,
+          PEOPLE_COLLECTION,
+          new Document().append("name", "bob").append("town", "da bucket"));
+
     } catch (Exception ex) {
       System.out.println("Exception: " + ex.getMessage());
       ex.printStackTrace();
@@ -74,27 +97,6 @@ public class MongoDB {
     } finally {
       long elapsed = System.currentTimeMillis() - start;
       System.out.println("elapsed " + elapsed + " numdocs: " + numdocs);
-    }
-
-    // holding area for methods that we want to skip.
-    if (false) {
-
-      aggregateOne(mdb);
-
-      coll = mdb.getCollection(PEOPLE_COLLECTION);
-      System.out.println("document count " + coll.countDocuments());
-
-      deleteOurDatabase(client, DB_NAME);
-
-      listDatabases(client);
-
-      printSomeZips(client);
-      printSomePeople(client, DB_NAME, PEOPLE_COLLECTION, 100);
-      insertOneDocument(
-          client,
-          DB_NAME,
-          PEOPLE_COLLECTION,
-          new Document().append("name", "bob").append("town", "da bucket"));
     }
   }
 
@@ -105,23 +107,21 @@ public class MongoDB {
     regex.append("$options", "i");
 
     Bson match = match(eq("name", regex));
-    Bson sort = sort(ascending("town"));
+    Bson sort = sort(ascending("_id"));
     Bson group = group("$catname", sum("count", 1));
-    Bson project = project(fields(include("catname")));
-    // Bson out = out("res");
+    //    Bson project = project(fields(include("catname")));
 
     MongoCollection<Document> coll = mdb.getCollection(PEOPLE_COLLECTION);
 
-    List<Document> res = coll.aggregate(List.of(match, sort, group)).into(new ArrayList());
+    List<Document> res = coll.aggregate(List.of(match, group, sort)).into(new ArrayList());
 
-    coll = mdb.getCollection("res");
 
     res.forEach(
         d -> {
           System.out.println(d.toString());
         });
 
-    coll.insertMany(res);
+    mdb.getCollection("res").insertMany(res);
 
     System.out.println("count from res " + coll.countDocuments());
   }
@@ -135,7 +135,11 @@ public class MongoDB {
   }
 
   void insertOneDocument(MongoClient client, String dbName, String collection, Document doc) {
-    client.getDatabase(dbName).getCollection(collection).insertOne(doc);
+    InsertOneResult res = client.getDatabase(dbName).getCollection(collection).insertOne(doc);
+    System.out.println("insertOneDocument acknowledged? " + res.wasAcknowledged());
+    System.out.println("InsertOneDocument insertedId: " + res.getInsertedId());
+    System.out.println(
+        "InertOnedocument inserted objectId: " + res.getInsertedId().asObjectId().getValue());
   }
 
   void ping(MongoClient client) {
@@ -168,13 +172,17 @@ public class MongoDB {
         docs.add(
             new Document()
                 .append("name", faker.name().name())
-                .append("town", faker.address().city())
-                .append("state", faker.address().state())
+                .append(
+                    "address",
+                    new Document()
+                        .append("town", faker.address().city())
+                        .append("state", faker.address().state())
+                        .append("zip", faker.address().zipCode()))
                 .append("phone", faker.phoneNumber().phoneNumber())
                 .append("email", faker.internet().emailAddress())
                 .append("catname", i % 23 == 0 ? "Mickey" : faker.cat().name()));
 
-        if (i % 50000 == 0) {
+        if (i % 25000 == 0) {
           coll.insertMany(docs);
           docs.clear();
         }
